@@ -7,31 +7,33 @@
 
 SQLHelper::SQLHelper(const string& url, const string& user, const string& password) {
     try {
-        cout << "Initializing SQL driver..." << endl;
+        _log.push_back("Initializing SQL driver...");
         driver=mysql::get_driver_instance();
-        cout<<"Driver initialized succesfully!"<<endl;
-        cout<<"Creating session..."<<endl;
+        _log.push_back("Driver initialized succesfully!");
+        _log.push_back("Creating session...");
         connection=std::unique_ptr<Connection>(driver->connect(url,user,password));
-        cout<<"Conected successfully!"<<endl;
-        cout<<"Creating statement..."<<endl;
+        _log.push_back("Conected successfully!");
+        _log.push_back("Creating statement...");
         statement=std::unique_ptr<Statement>(connection->createStatement());
+        _log.push_back("Created statement!");
     }
     catch (SQLException &e)
     {
+        _log.push_back(e.what());
         cout<<e.what()<<endl;
-        cout<<"Terminating..."<<endl;
     }
 }
 
 std::unique_ptr<ResultSet> SQLHelper::Query(const string& query) {
     try{
+        _log.push_back("Executing '"+query+"' query string");
     std::unique_ptr<ResultSet> result(statement->executeQuery(query));
     return result;
     }
     catch (SQLException &e)
     {
+        _log.push_back(e.what());
         cout<<e.what()<<endl;
-        cout<<"Terminating..."<<endl;
     }
     return nullptr;
 }
@@ -42,6 +44,7 @@ std::unique_ptr<ResultSet> SQLHelper::fetchDatabases() {
     }
     catch (SQLException &e)
     {
+        _log.push_back(e.what());
         cout<<e.what()<<endl;
         cout<<"Terminating..."<<endl;
     }
@@ -50,6 +53,26 @@ std::unique_ptr<ResultSet> SQLHelper::fetchDatabases() {
 
 void SQLHelper::selectDB(const string& db) {
     connection->setSchema(db);
+}
+
+std::unique_ptr<ResultSet> SQLHelper::fetchTables() {
+    try {
+        return Query("SHOW TABLES");
+    }
+    catch(SQLException &e)
+    {
+        _log.push_back(e.what());
+    }
+}
+
+std::unique_ptr<ResultSet> SQLHelper::fetchColumns(const string table) {
+    try {
+        return Query("SHOW COLUMNS FROM "+table);
+    }
+    catch(SQLException &e)
+    {
+        _log.push_back(e.what());
+    }
 }
 
 

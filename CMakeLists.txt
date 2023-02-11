@@ -22,7 +22,7 @@ link_libraries(${OPENSSL_LINK}  ${MYSQL_LINK} ${OPENGL} ${GLEW_LINK} ${GLFW_LINK
 set(CMAKE_CXX_STANDARD 11)
 
 add_executable(myWorkbench main.cpp glad.c SQL/SQLHelper.cpp SQL/SQLHelper.h
-        ${IMGUI_H}/imgui.cpp ${IMGUI_H}/imgui_demo.cpp ${IMGUI_H}/imgui_draw.cpp ${IMGUI_H}/imgui_tables.cpp ${IMGUI_H}/imgui_widgets.cpp ${IMGUI_H}/backends/imgui_impl_glfw.cpp ${IMGUI_H}/backends/imgui_impl_opengl3.cpp)
+        ${IMGUI_H}/imgui.cpp ${IMGUI_H}/imgui_demo.cpp ${IMGUI_H}/imgui_draw.cpp ${IMGUI_H}/imgui_tables.cpp ${IMGUI_H}/imgui_widgets.cpp ${IMGUI_H}/backends/imgui_impl_glfw.cpp ${IMGUI_H}/backends/imgui_impl_opengl3.cpp stb_image.h)
 
 if (APPLE)
     target_link_libraries(myWorkbench "-framework OpenGL")

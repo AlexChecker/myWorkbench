@@ -23,23 +23,28 @@
 #include <jdbc/cppconn/variant.h>
 #include <jdbc/cppconn/version_info.h>
 #include <jdbc/cppconn/warning.h>
+#include <vector>
 
 using ::std::string;
 using ::std::cout;
 using ::std::endl;
 using namespace sql;
 
+
 class SQLHelper {
 
 private:
     Driver * driver;
     std::unique_ptr<Connection> connection;
-    std::unique_ptr<Statement> statement;
 
 public:
+    std::unique_ptr<Statement> statement;
+    std::vector<std::string> _log;
     SQLHelper(const string& url, const string& user, const string& password);
     std::unique_ptr<ResultSet> Query(const string& query);
     std::unique_ptr<ResultSet> fetchDatabases();
+    std::unique_ptr<ResultSet> fetchTables();
+    std::unique_ptr<ResultSet> fetchColumns(const string table);
     void selectDB(const string& db);
 };
 
