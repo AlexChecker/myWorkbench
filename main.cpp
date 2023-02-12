@@ -22,7 +22,22 @@ public:
     vector<string> columns;
 };
 
+enum TableTypes
+{
+    TABLE_INT=5,
+    TABLE_DATE_TIME=17,
+    TABLE_STRING=13,
 
+};
+
+struct View_Table
+{
+public:
+    vector<string> columns;
+    vector<vector<string>> rows;
+};
+
+View_Table setupViewTable(string tableName,SQLHelper *sql);
 vector<Table> updateTableList(SQLHelper *sql);
 
 int main() {
@@ -58,6 +73,14 @@ int main() {
     //ImGui::StyleColorsClassic();
     ImGui_ImplGlfw_InitForOpenGL(window,true);
     ImGui_ImplOpenGL3_Init("#version 150");
+    ImFont* font = io.Fonts->AddFontDefault();
+    ImFontConfig cfg;
+    cfg.MergeMode=true;
+
+    io.Fonts->AddFontFromFileTTF("./res/cyrillic.ttf", 8,&cfg,io.Fonts->GetGlyphRangesCyrillic());
+    io.Fonts->Build();
+
+
     ImGuiWindowFlags standart=0;
     standart |= ImGuiWindowFlags_NoMove;
     standart |= ImGuiWindowFlags_NoCollapse;
@@ -73,6 +96,17 @@ int main() {
     int reload_texture_w;
     int reload_texture_h;
     LoadTextureFromFile("./img/reload.png",&reload_texture,&reload_texture_w,&reload_texture_h);
+    bool viewTable=false;
+    string viewTableName="";
+    string oldViewTableName="";
+    ImGuiTableFlags tableView=0;
+    tableView |= ImGuiTableFlags_Borders;
+    tableView |= ImGuiTableFlags_RowBg;
+    tableView |= ImGuiTableFlags_ScrollX;
+    tableView |= ImGuiTableFlags_ScrollY;
+
+    vector<string> cols;
+    View_Table view;
     while(!glfwWindowShouldClose(window))
     {
         glfwGetWindowSize(window,&width,&height);
@@ -100,6 +134,7 @@ int main() {
                 {
                     selected_db=db;
                     sql.selectDB(db);
+                    //setupViewTable("appeal",&sql);
                 }
             }
             ImGui::EndTabItem();
@@ -114,6 +149,9 @@ int main() {
                     tables= updateTableList(&sql);
                     old_selected_db=selected_db;
                 }
+                //if(viewTable)
+                //ImGui::TextColored(ImVec4(.0,1.0,.0,1.0),"true");
+                //else ImGui::TextColored(ImVec4(1.0,.0,.0,1.0),"false");
                 for(auto t : tables)
                 {
                     if(ImGui::TreeNode(t.name.c_str()))
@@ -124,6 +162,13 @@ int main() {
                         }
                         ImGui::TreePop();
                     }
+                    ImGui::SameLine();
+                    if(ImGui::SmallButton(("View "+t.name).c_str()))
+                    {
+                        viewTable=true;
+                        viewTableName=t.name;
+                        cols.clear();
+                    }
                 }
             }
 
@@ -132,6 +177,39 @@ int main() {
         ImGui::EndTabBar();
 
         ImGui::End();
+
+        if(viewTable) {
+
+            ImGui::Begin("View Table",&viewTable);
+            ImGui::SetWindowSize(ImVec2(500,300));
+            if(viewTableName!=oldViewTableName)
+            {
+                view = setupViewTable(viewTableName,&sql);
+                oldViewTableName=viewTableName;
+            }
+            if(ImGui::BeginTable("table_1",view.columns.size(),tableView))
+            {
+                for(int i=0;i<view.columns.size();i++)
+                {
+                    ImGui::TableSetupColumn(view.columns.at(i).c_str(),ImGuiTableColumnFlags_None);
+                }
+                ImGui::TableHeadersRow();
+                //cout<<view.rows.at(0).size()<<" | "<<view.columns.size()<<endl;
+                for(int y=0;y<view.rows.size();y++)
+                {
+                    ImGui::TableNextRow();
+                    for(int x=0;x<view.columns.size();x++)
+                    {
+                        ImGui::TableSetColumnIndex(x);
+                        ImGui::Text(view.rows.at(y).at(x).c_str());
+                    }
+                }
+
+
+                    ImGui::EndTable();
+            }
+            ImGui::End();
+        }
 
         ImGui::Begin("Log",nullptr,standart);
         ImGui::SetWindowSize(ImVec2(width,height/3));
@@ -192,7 +270,7 @@ bool LoadTextureFromFile(const char* filename, GLuint* out_texture, int* out_wid
     int image_width = 0;
     int image_height = 0;
     unsigned char* image_data = stbi_load(filename, &image_width, &image_height, NULL, 4);
-    if (image_data == NULL)
+    if (image_data == nullptr)
         return false;
 
     // Create a OpenGL texture identifier
@@ -235,6 +313,55 @@ vector<Table> updateTableList(SQLHelper *sql)
             tab.columns.push_back(columns->getString(1));
         }
         result.push_back(tab);
+    }
+
+    return result;
+}
+
+
+View_Table setupViewTable(string tableName,SQLHelper *sql)
+{
+    View_Table result;
+
+    auto cols = sql->fetchColumns(tableName);
+    while(cols->next())
+    {
+        result.columns.push_back(cols->getString(1).c_str());
+    }
+    auto contents=sql->Query("select * from "+tableName);
+    DataType types();
+    vector<int> tps;
+
+    for(int i=0;i<result.columns.size();i++)
+    {
+        //cout<<"column type"<<contents->getMetaData()->getColumnType(i+1)<<endl;
+        tps.push_back(contents->getMetaData()->getColumnType(i+1));
+    }
+    while(contents->next())
+    {
+        vector<string> row;
+        for(int i=0;i<result.columns.size();i++)
+        {
+            switch (tps.at(i)) {
+                case DataType::INTEGER:
+                    row.push_back(to_string(contents->getInt(i+1)));
+                    break;
+                case DataType::VARCHAR:
+                    row.push_back(contents->getString(i+1));
+                    break;
+                case DataType::TIMESTAMP:
+                    row.push_back(to_string(contents->getInt(i+1)));
+                    break;
+                case DataType::UNKNOWN:
+                    row.push_back(to_string(contents->getInt64(i+1)));
+                    break;
+                case DataType::DATE:
+                    row.push_back(to_string(contents->getInt(i+1)));
+                    break;
+            }
+        }
+
+        result.rows.push_back(row);
     }
 
     return result;
